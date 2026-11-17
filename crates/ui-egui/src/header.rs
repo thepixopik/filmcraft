@@ -13,9 +13,7 @@ use crate::theme::Tokens;
 /// Height of the header bar. With `integrated_titlebar` it sits in the macOS title-bar strip.
 pub const HEIGHT: f32 = 38.0;
 
-/// Draws the header bar in `rect` and handles its clicks: Home, the mode tabs, the workspace name
-/// and its menu (the workspaces, then Reset to Saved Layout, Save Changes to this Workspace, Save as
-/// New Workspace… and Edit Workspaces…), Discord and the quick actions.
+/// Draws the header bar in `rect` and handles its clicks.
 pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
     let t = app.tokens;
     let p = ui.painter().clone();
@@ -99,14 +97,12 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
     if btn(ui, Icon::Bell, "notifications", tl!("Progress"), app).clicked() {
         app.ui.mode = Mode::Export;
     }
-    // Quick Export: a popup with File Name & Location, a preset list and Export (Premiere 26)
-    let qx = rect.max.x - 14.0 - 4.0 * 38.0; // the fifth button from the right
+    let qx = rect.max.x - 14.0 - 4.0 * 38.0;
     if btn(ui, Icon::Export, "quickExport", tl!("Quick Export"), app).clicked() {
         app.ui.export.quick_open = !app.ui.export.quick_open;
         ui.ctx().data_mut(|d| d.insert_temp(egui::Id::unique("quick-export-toggled"), true));
     }
     crate::panels::export_mode::quick_export(app, ui.ctx(), pos2(qx - 340.0, rect.max.y + 4.0));
-    // Appearance Mode: click for the next one (Auto, Light, Dark); the icon shows the current one.
     let (icon, mode) = match app.session.prefs.appearance.appearance_mode.as_str() {
         "auto" => (Icon::Monitor, tl!("Sync with system")),
         "light" => (Icon::Sun, tl!("Light")),
@@ -119,25 +115,23 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
         crate::panels::settings::cycle_appearance(app, ui.ctx());
     }
     let ws_resp = btn(ui, Icon::Workspaces, "workspaces", tl!("Workspaces"), app);
-    // workspace name (caps)
     let ws = crate::i18n::to_uppercase(crate::i18n::t(&app.ui.workspace));
     let wg = p.layout_no_wrap(ws.clone(), Tokens::ui(11.0), t.text_dim);
     let wr = Rect::from_min_size(pos2(rx - wg.size().x + 10.0, rect.center().y - 10.0), vec2(wg.size().x + 8.0, 20.0));
     let wresp = ui.interact(wr, egui::Id::unique("hdr-ws-name"), Sense::click());
     app.auto.add("header.workspaceName", wr, &ws);
     p.galley_with_override_text_color(pos2(wr.min.x + 4.0, rect.center().y - wg.size().y / 2.0), wg, if wresp.hovered() { t.text } else { t.text_dim });
-    // Community: a labelled Discord button, always one click away.
+    // Studio switcher pill button
     {
-        let label = "Discord";
+        let label = "Studio";
         let g = p.layout_no_wrap(label.to_string(), Tokens::ui(12.0), Color32::WHITE);
         let w = g.size().x + 34.0;
         let r = Rect::from_min_size(pos2(wr.min.x - w - 14.0, rect.center().y - 12.0), vec2(w, 24.0));
-        let resp = ui.interact(r, egui::Id::unique("hdr-discord"), Sense::click()).on_hover_text(tl!("Join the ArtCraft Discord (discord.gg/artcraft)"));
-        app.auto.add("header.discord", r, "Join the ArtCraft Discord");
+        let resp = ui.interact(r, egui::Id::unique("hdr-discord"), Sense::click()).on_hover_text(tl!("Open The AllCraft Studio"));
+        app.auto.add("header.discord", r, "Open The AllCraft Studio");
         ui.painter().rect_filled(r, 12.0, if resp.hovered() { t.accent_hover } else { t.accent });
-        icons::paint(ui.painter(), Rect::from_center_size(pos2(r.min.x + 14.0, r.center().y), vec2(14.0, 14.0)), Icon::Chat, Color32::WHITE);
+        icons::paint(ui.painter(), Rect::from_center_size(pos2(r.min.x + 14.0, r.center().y), vec2(14.0, 14.0)), Icon::Globe, Color32::WHITE);
         ui.painter().galley(pos2(r.min.x + 25.0, r.center().y - g.size().y / 2.0), g, Color32::WHITE);
-        // Localized menus and user titles can be wider than English. Use the actual gap.
         let left = left_end + 12.0;
         let right = r.min.x - 12.0;
         if right > left + 40.0 {
@@ -155,7 +149,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
         }
 
         if resp.clicked() {
-            crate::links::open(app, ui.ctx(), crate::links::DISCORD);
+            crate::links::open(app, ui.ctx(), crate::links::WEBSITE);
         }
     }
     let popup_id = egui::Id::unique("workspaces-popup");
@@ -177,7 +171,6 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
                         }
                     }
                     ui.separator();
-                    // the actions of Window ▸ Workspaces, as in Premiere's workspace menu
                     let actions = [
                         ("reset", tl!("Reset to Saved Layout")),
                         ("saveChanges", tl!("Save Changes to this Workspace")),
